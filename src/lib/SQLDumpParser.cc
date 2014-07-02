@@ -43,11 +43,9 @@ SQLData::~SQLData() {
 }
 
 /*************************** SQLDumpParser ***************************/
-SQLDumpParser::SQLDumpParser(std::string && path) :
-    dump_file(path, std::ifstream::in | std::ifstream::binary)
-{
-    input.push(boost::iostreams::gzip_decompressor());
-    input.push(dump_file);
+SQLDumpParser::SQLDumpParser(std::string &&path) {
+    input = open_compressed_dump(path.c_str());
+    assert(input);
 }
 
 bool SQLDumpParser::read_until_values() {
@@ -59,7 +57,7 @@ bool SQLDumpParser::read_until_values() {
     int pos = 0;
 
     while (target[pos] != 0) {
-        char cur = input.get();
+        char cur = input->get();
 
         if (cur == std::char_traits<char>::eof()) {
             return false;
@@ -91,9 +89,9 @@ SQLRow_u SQLDumpParser::get() {
     }
 
     // Start tuple of values
-    assert(input.get() == '(');
+    assert(input->get() == '(');
     for (;;) {
-        char cur = input.get();
+        char cur = input->get();
 
         // String
         if (cur == '\'') {
@@ -102,7 +100,7 @@ SQLRow_u SQLDumpParser::get() {
 
             // Read string while handling backslashes
             for (;;) {
-                cur = input.get();
+                cur = input->get();
                 assert(cur != eof);
 
                 if (backslash) {
@@ -122,7 +120,7 @@ SQLRow_u SQLDumpParser::get() {
             row->emplace_back(std::string(str.data(), str.size()));
 
             // In other handers, this naturally points at ',' or ')'
-            cur = input.get();
+            cur = input->get();
         }
 
         // Integers/floats
@@ -132,7 +130,7 @@ SQLRow_u SQLDumpParser::get() {
 
             str.push_back(cur);
             for (;;) {
-                cur = input.get();
+                cur = input->get();
                 assert(cur != eof);
 
                 if (cur == '.' && !fpoint) {
@@ -154,11 +152,11 @@ SQLRow_u SQLDumpParser::get() {
 
         // Nulls
         if (cur == 'N') {
-            assert(input.get() == 'U');
-            assert(input.get() == 'L');
-            assert(input.get() == 'L');
+            assert(input->get() == 'U');
+            assert(input->get() == 'L');
+            assert(input->get() == 'L');
             row->emplace_back();
-            cur = input.get();
+            cur = input->get();
         }
 
         // Check for the end of tuple
@@ -169,7 +167,7 @@ SQLRow_u SQLDumpParser::get() {
     }
 
     // Handle comma or semicolon at the end
-    char cur = input.get();
+    char cur = input->get();
     assert(cur == ',' || cur == ';');
     if (cur == ';') {
         mid_statement = false;

@@ -11,8 +11,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
+#include "CompressedDumpReader.hh"
 
 typedef enum {
     String,
@@ -84,8 +83,7 @@ namespace std {
 
 class SQLDumpParser {
     private:
-        std::ifstream dump_file;
-        boost::iostreams::filtering_istream input;
+        CompressedDumpReader_u input;
         bool mid_statement = false;
 
         bool read_until_values();
