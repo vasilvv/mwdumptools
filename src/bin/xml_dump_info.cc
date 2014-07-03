@@ -5,6 +5,7 @@
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         std::cerr << "Usage: mw-xml-dump-info dump.xml" << std::endl;
+        return 1;
     }
 
     XMLDumpParser parser(argv[1], PerPage);
