@@ -1,13 +1,17 @@
 #include "CompressedDumpReader.hh"
 
 #include <cassert>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 
 #include <archive.h>
+#include <bzlib.h>
 #include <zlib.h>
 
 #define BUFFER_SIZE 8192
+
+// FIXME: this file needs more error handling
 
 class TransparentDumpReader : public CompressedDumpReader {
   private:
@@ -31,6 +35,17 @@ class TransparentDumpReader : public CompressedDumpReader {
         }
 
         return len;
+    }
+};
+
+class BulkDumpReader : public CompressedDumpReader {
+    virtual int get() override {
+        char result;
+        if (read(&result, 1) == 1) {
+            return result;
+        } else {
+            return std::char_traits<char>::eof();
+        }
     }
 };
 
@@ -64,13 +79,41 @@ class GzipDumpReader : public CompressedDumpReader {
     bool valid() { return file != nullptr; }
 };
 
-class LibarchiveDumpReader : public CompressedDumpReader {
+class Bzip2DumpReader : public BulkDumpReader {
+  private:
+    FILE *realfile;
+    BZFILE *file;
+
+  public:
+    Bzip2DumpReader(const char *path) : BulkDumpReader() {
+        int error;
+        realfile = fopen(path, "rb");
+        file = BZ2_bzReadOpen(&error, realfile, 0, 0, nullptr, 0);
+    }
+
+    virtual ~Bzip2DumpReader() {
+        int error;
+
+        if (file && realfile) {
+            BZ2_bzReadClose(&error, file);
+            fclose(realfile);
+            file = nullptr;
+            realfile = nullptr;
+        }
+    }
+    virtual ssize_t read(char *buffer, size_t len) override {
+        int error;
+        return BZ2_bzRead(&error, file, buffer, len);
+    }
+};
+
+class LibarchiveDumpReader : public BulkDumpReader {
   private:
     struct archive *arch;
     bool err;
 
   public:
-    LibarchiveDumpReader(const char *path) : CompressedDumpReader() {
+    LibarchiveDumpReader(const char *path) : BulkDumpReader() {
         arch = archive_read_new();
         archive_read_support_filter_all(arch);
         archive_read_support_format_all(arch);
@@ -89,15 +132,6 @@ class LibarchiveDumpReader : public CompressedDumpReader {
             archive_read_close(arch);
             archive_read_free(arch);
             arch = nullptr;
-        }
-    }
-
-    virtual int get() override {
-        char result;
-        if (read(&result, 1) == 1) {
-            return result;
-        } else {
-            return std::char_traits<char>::eof();
         }
     }
 
@@ -134,6 +168,11 @@ CompressedDumpReader_u open_compressed_dump(const char *path) {
     // Gzip
     if (!memcmp("\x1f\x8b\x08", preamble, 3)) {
         return CompressedDumpReader_u(new GzipDumpReader(path));
+    }
+
+    // Bzip2
+    if (!memcmp("BZh", preamble, 3)) {
+        return CompressedDumpReader_u(new Bzip2DumpReader(path));
     }
 
     // 7-zip
