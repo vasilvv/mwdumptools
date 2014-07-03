@@ -6,6 +6,7 @@
 class CompressedDumpReader {
   public:
     virtual int get() = 0;
+    virtual ssize_t read(char *buffer, size_t len) = 0;
 
     CompressedDumpReader() {}
     CompressedDumpReader(CompressedDumpReader const&) = delete;

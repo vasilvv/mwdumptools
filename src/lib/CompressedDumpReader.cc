@@ -17,6 +17,19 @@ class TransparentDumpReader : public CompressedDumpReader {
     virtual ~TransparentDumpReader() {};
 
     virtual int get() override { return file.get(); }
+    virtual ssize_t read(char *buffer, size_t len) override {
+        file.read(buffer, len);
+
+        if (!file) {
+            if (file.eof()) {
+                return file.gcount();
+            } else {
+                return -1;
+            }
+        }
+
+        return len;
+    }
 };
 
 class GzipDumpReader : public CompressedDumpReader {
@@ -40,6 +53,10 @@ class GzipDumpReader : public CompressedDumpReader {
                       "EOF is meant to be -1");
 
         return gzgetc(file);
+    }
+
+    virtual ssize_t read(char *buffer, size_t len) override {
+        return gzread(file, buffer, len);
     }
 
     bool valid() { return file != nullptr; }

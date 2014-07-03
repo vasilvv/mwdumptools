@@ -3,4 +3,5 @@ add_library(
 
 	CompressedDumpReader.cc
 	SQLDumpParser.cc
+	XMLDumpParser.cc
 )
