@@ -7,5 +7,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 find_package(ZLIB)
+find_package(EXPAT)
+find_package(LibArchive)
 
 add_subdirectory(src)
