@@ -13,4 +13,3 @@ add_executable(
 	xml_dump_info.cc
 )
 target_link_libraries(mw-xml-dump-info mwdump)
-target_link_libraries(mw-xml-dump-info expat)
