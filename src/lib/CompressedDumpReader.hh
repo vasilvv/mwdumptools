@@ -1,6 +1,7 @@
 #ifndef __COMPRESSEDDUMPREADER_HH
 #define __COMPRESSEDDUMPREADER_HH
 
+#include <cstdio>
 #include <memory>
 
 class CompressedDumpReader {
